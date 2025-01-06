@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
+import { Bubble } from '@ant-design/x';
 import logo from './logo.svg';
 import './App.css';
+import axios from 'axios';
 
 function App() {
   const [currentTime, setCurrentTime] = useState(0);
 
   useEffect(() => {
-    fetch('/api/time').then(res => res.json()).then(data => {
-      setCurrentTime(data.time);
-    });
+    axios.get('/api/time')
+        .then(res => {
+          setCurrentTime(res.data.time);
+        });
   }, []);
 
   return (
@@ -27,6 +30,8 @@ function App() {
           Learn React
         </a>
         <p>THE CURRENT TIME IS {currentTime}.</p>
+
+        <Bubble content="Hello world!" />
       </header>
     </div>
   );

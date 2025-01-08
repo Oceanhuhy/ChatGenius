@@ -20,9 +20,11 @@ import {
   PlusOutlined,
   ReadOutlined,
   ShareAltOutlined,
+  RobotOutlined,
   SmileOutlined,
+  UserOutlined
 } from '@ant-design/icons';
-import { Badge, Button, Space } from 'antd';
+import { Badge, Button, Space, Spin } from 'antd';
 import axios from 'axios';
 
 const renderTitle = (icon, title) => (
@@ -45,7 +47,7 @@ const useStyle = createStyles(({ token, css }) => {
     layout: css`
       width: 100%;
       min-width: 1000px;
-      height: 722px;
+      height: 800px;
       border-radius: ${token.borderRadius}px;
       display: flex;
       background: ${token.colorBgContainer};
@@ -70,7 +72,7 @@ const useStyle = createStyles(({ token, css }) => {
     chat: css`
       height: 100%;
       width: 100%;
-      max-width: 700px;
+      max-width: 800px;
       margin: 0 auto;
       box-sizing: border-box;
       display: flex;
@@ -98,8 +100,8 @@ const useStyle = createStyles(({ token, css }) => {
       box-sizing: border-box;
 
       img {
-        width: 24px;
-        height: 24px;
+        width: 50px;
+        height: 50px;
         display: inline-block;
       }
 
@@ -128,20 +130,23 @@ const placeholderPromptsItems = [
           color: '#FF4D4F',
         }}
       />,
-      'Hot Topics',
+      '大语言模型',
     ),
-    description: 'What are you interested in?',
+    description: '基于大模型的智能问答',
     children: [
       {
         key: '1-1',
+        icon: <HeartOutlined />,
         description: `你是谁?`,
       },
       {
         key: '1-2',
+        icon: <SmileOutlined />,
         description: `讲个笑话?`,
       },
       {
         key: '1-3',
+        icon: <CommentOutlined />,
         description: `你会什么?`,
       },
     ],
@@ -154,24 +159,53 @@ const placeholderPromptsItems = [
           color: '#1890FF',
         }}
       />,
-      'Design Guide',
+      '知识库问答',
     ),
-    description: 'How to design a good product?',
+    description: '基于知识库的智能问答',
     children: [
       {
         key: '2-1',
         icon: <HeartOutlined />,
-        description: `Know the well`,
+        description: `党建学习`,
       },
       {
         key: '2-2',
         icon: <SmileOutlined />,
-        description: `Set the AI role`,
+        description: `公司制度`,
       },
       {
         key: '2-3',
         icon: <CommentOutlined />,
-        description: `Express the feeling`,
+        description: `通知公告`,
+      },
+    ],
+  },
+  {
+    key: '3',
+    label: renderTitle(
+      <RobotOutlined
+        style={{
+          color: '#1890FF',
+        }}
+      />,
+      '智能体应用',
+    ),
+    description: '基于智能体的效率工具',
+    children: [
+      {
+        key: '3-1',
+        icon: <HeartOutlined />,
+        description: `智能审批`,
+      },
+      {
+        key: '2-2',
+        icon: <SmileOutlined />,
+        description: `智能提报`,
+      },
+      {
+        key: '2-3',
+        icon: <CommentOutlined />,
+        description: `智能办公`,
       },
     ],
   },
@@ -179,19 +213,38 @@ const placeholderPromptsItems = [
 const roles = {
   ai: {
     placement: 'start',
+    avatar: {
+      icon: <UserOutlined />,
+      style: {
+        background: '#fde3cf',
+      },
+    },
     typing: {
       step: 5,
-      interval: 20,
+      interval: 40,
     },
     styles: {
       content: {
         borderRadius: 16,
       },
     },
+    loadingRender: () => (
+      <Space>
+        <Spin size="small" />
+        Custom loading...
+      </Space>
+    ),
+    // header: '智能客服'
   },
   local: {
     placement: 'end',
     variant: 'shadow',
+    avatar: {
+      icon: <UserOutlined />,
+      style: {
+        background: '#87d068',
+      },
+    },
   },
 };
 const Independent = () => {
@@ -214,7 +267,7 @@ const Independent = () => {
   // ==================== Runtime ====================
   const [agent] = useXAgent({
     request: async ({ message }, { onSuccess }) => {
-      setStatus('pending');
+      setStatus('loading');
       const msg = [{
         role: 'user',
         content: message,
@@ -294,7 +347,7 @@ const Independent = () => {
       ...conversationsItems,
       {
         key: `${conversationsItems.length}`,
-        label: `New Conversation ${conversationsItems.length}`,
+        label: `会话 ${conversationsItems.length}`,
       },
     ]);
     setActiveKey(`${conversationsItems.length}`);
@@ -317,18 +370,26 @@ const Independent = () => {
       <Welcome
         variant="borderless"
         icon="https://mdn.alipayobjects.com/huamei_iwk9zp/afts/img/A*s5sNRo5LjfQAAAAAAAAAAAAADgCCAQ/fmt.webp"
-        title="Hello, I'm Ant Design X"
-        description="Base on Ant Design, AGI product interface solution, create a better intelligent vision~"
+        title="Hi，我是智能客服，很高兴见到你！"
+        description="基于大模型、知识库和智能体，构建智慧办公新体验~"
       />
       <Prompts
-        title="Do you want?"
+        // title="有什么可以帮你的?"
         items={placeholderPromptsItems}
         styles={{
           list: {
-            width: '100%',
+            width: '752px',
           },
           item: {
+            flex: 'none',
+            width: 'calc(30% - 6px)',
+            backgroundImage: `linear-gradient(137deg, #e5f4ff 0%, #efe7ff 100%)`,
+            border: 0,
             flex: 1,
+          },
+          subItem: {
+            background: 'rgba(255,255,255,0.45)',
+            border: '1px solid #FFF',
           },
         }}
         onItemClick={onPromptsItemClick}
@@ -336,23 +397,21 @@ const Independent = () => {
     </Space>
   );
 
-  var items = messages.map(({ id, message, status }) => ({
+  const items = messages.map(({ id, message, status }) => ({
     key: id,
     loading: status === 'loading',
     role: status === 'local' ? 'local' : 'ai',
     content: message,
   }));
 
-  // console.log('itemList',itemsList)
-
   const logoNode = (
     <div className={styles.logo}>
       <img
-        src="https://mdn.alipayobjects.com/huamei_iwk9zp/afts/img/A*eco6RrQhxbMAAAAAAAAAAAAADgCCAQ/original"
+        src="/WechatIMG78.jpg"
         draggable={false}
         alt="logo"
       />
-      <span>Ant Design X</span>
+      <span>大数据资产运营</span>
     </div>
   );
 
@@ -370,7 +429,7 @@ const Independent = () => {
           className={styles.addBtn}
           icon={<PlusOutlined />}
         >
-          New Conversation
+          添加会话
         </Button>
         {/* 🌟 会话管理 */}
         <Conversations

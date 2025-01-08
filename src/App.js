@@ -26,6 +26,7 @@ import {
 } from '@ant-design/icons';
 import { Badge, Button, Space, Spin } from 'antd';
 import axios from 'axios';
+import { marked } from 'marked';
 
 const renderTitle = (icon, title) => (
   <Space align="start">
@@ -47,7 +48,7 @@ const useStyle = createStyles(({ token, css }) => {
     layout: css`
       width: 100%;
       min-width: 1000px;
-      height: 800px;
+      height: 100vh;
       border-radius: ${token.borderRadius}px;
       display: flex;
       background: ${token.colorBgContainer};
@@ -264,6 +265,11 @@ const Independent = () => {
 
   const [bbb, setBbb] = React.useState([]);
 
+  const changecontext = (key) => {
+    const formattedText = { __html: `<div class="custom-style">${marked(key)}</div>` };
+    return <div dangerouslySetInnerHTML={formattedText}></div>;
+  };
+
   // ==================== Runtime ====================
   const [agent] = useXAgent({
     request: async ({ message }, { onSuccess }) => {
@@ -277,7 +283,8 @@ const Independent = () => {
       .then(function (response) {
         console.log(response);
         setStatus('success');
-        onSuccess(response.data.choices[0].message.content);
+        
+        onSuccess(changecontext(response.data.choices[0].message.content));
       })
       .catch(function (error) {
         console.log(`url: /agent/chatmodel, data: ${JSON.stringify(msg)}, error: ${error}`);
@@ -290,30 +297,7 @@ const Independent = () => {
     agent,
   });
 
-  // var aaa = [
-  //   { id: 0, message: '张三张三', variant: 'borderless', status: false },
-  //   { id: 1, message: '张三张三张三张三', variant: 'borderless', status: false },
-  // ];
-
-  // var bbb = [
-  //   { id: 0, message: '李四李四', variant: 'borderless', status: false },
-  //   { id: 1, message: '李四李四李四李四', variant: 'borderless', status: false },
-  //   { id: 2, message: '李四李四李四李四李四李四', variant: 'borderless', status: false },
-  // ];
-
-  // 假设这是获取消息列表的函数
-  // const setMessagesForConversation = (key) => {
-  //   if(key==='0'){
-  //     setAaa(messages);
-  //     // aaa=messages;
-  //   }else{
-  //     setBbb(messages);
-  //     // bbb=messages;
-  //   }
-    
-  // };
-
-  // 假设这是获取消息列表的函数
+  // 根据key获取消息列表的函数
   const getMessagesForConversation = (key) => {
     if(key==='0'){
       return aaa;
@@ -321,6 +305,8 @@ const Independent = () => {
       return bbb;
     }
   };
+
+  console.log(messages);
 
   //切换会话
   useEffect(() => {

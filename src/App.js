@@ -7,9 +7,10 @@ import {
   Welcome,
   useXAgent,
   useXChat, XRequest,
+  ConversationsProps,
 } from '@ant-design/x';
 import { createStyles } from 'antd-style';
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   CloudUploadOutlined,
   CommentOutlined,
@@ -22,11 +23,14 @@ import {
   ShareAltOutlined,
   RobotOutlined,
   SmileOutlined,
-  UserOutlined
+  UserOutlined,
+  DeleteOutlined, EditOutlined, StopOutlined
 } from '@ant-design/icons';
 import { Badge, Button, Space, Spin } from 'antd';
 import axios from 'axios';
 import { marked } from 'marked';
+import Cookies from 'js-cookie';
+
 
 const renderTitle = (icon, title) => (
   <Space align="start">
@@ -37,10 +41,7 @@ const renderTitle = (icon, title) => (
 const defaultConversationsItems = [
   {
     key: '0',
-    label: '会话0',
-  },{
-    key: '1',
-    label: '会话1',
+    label: '会话 0',
   },
 ];
 const useStyle = createStyles(({ token, css }) => {
@@ -138,17 +139,17 @@ const placeholderPromptsItems = [
       {
         key: '1-1',
         icon: <HeartOutlined />,
-        description: `你是谁?`,
+        description: `今日运势`,
       },
       {
         key: '1-2',
         icon: <SmileOutlined />,
-        description: `讲个笑话?`,
+        description: `讲个笑话`,
       },
       {
         key: '1-3',
         icon: <CommentOutlined />,
-        description: `你会什么?`,
+        description: `今日资讯`,
       },
     ],
   },
@@ -248,6 +249,9 @@ const roles = {
     },
   },
 };
+
+
+
 const Independent = () => {
   // ==================== Style ====================
   const { styles } = useStyle();
@@ -259,14 +263,16 @@ const Independent = () => {
   const [activeKey, setActiveKey] = React.useState(defaultConversationsItems[0].key);
   // const [attachedFiles, setAttachedFiles] = React.useState([]);
   const [status, setStatus] = React.useState();
+  const hasRun = useRef(false);
   // const [lines, setLines] = React.useState([]);
-
-  const [aaa, setAaa] = React.useState([]);
-
-  const [bbb, setBbb] = React.useState([]);
 
   const changecontext = (key) => {
     const formattedText = { __html: `<div class="custom-style">${marked(key)}</div>` };
+    return <div dangerouslySetInnerHTML={formattedText}></div>;
+  };
+
+  const changeHistory = (text) => {
+    const formattedText = { __html: text };
     return <div dangerouslySetInnerHTML={formattedText}></div>;
   };
 
@@ -274,22 +280,26 @@ const Independent = () => {
   const [agent] = useXAgent({
     request: async ({ message }, { onSuccess }) => {
       setStatus('loading');
-      const msg = [{
-        role: 'user',
-        content: message,
-      }];
+      const data = {
+        userId: Cookies.get('userId'),
+        chatId: activeKey,
+        msg: [{
+          role: 'user',
+          content: message,
+        }]
+      };
 
-      await axios.post('/agent/chatmodel', msg)
+      await axios.post('/model/chat', data)
       .then(function (response) {
-        console.log(response);
         setStatus('success');
-        
         onSuccess(changecontext(response.data.choices[0].message.content));
       })
       .catch(function (error) {
-        console.log(`url: /agent/chatmodel, data: ${JSON.stringify(msg)}, error: ${error}`);
+        console.log(`url: /model/chat, data: ${JSON.stringify(data)}, error: ${error}`);
         setStatus('error');
       });
+
+      
     },
   });
 
@@ -297,25 +307,65 @@ const Independent = () => {
     agent,
   });
 
+  const setMessagesForConversation = (key,msgs) => {
+    const data = {
+      userId: Cookies.get('userId'),
+      chatId: key,
+      messages: msgs
+    };
+    axios.post('/session/setchatsession', data)
+      .then(function (response) {
+      })
+      .catch(function (error) {
+        console.log(`url: /session/getchatsession, data: ${JSON.stringify(data)}, error: ${error}`);
+        setStatus('error');
+      });
+  }
+
   // 根据key获取消息列表的函数
   const getMessagesForConversation = (key) => {
-    if(key==='0'){
-      return aaa;
-    }else{
-      return bbb;
-    }
+    const data = {
+      userId: Cookies.get('userId'),
+      chatId: key
+    };
+
+    axios.post('/session/getchatsession', data)
+      .then(function (response) {
+        const transformedData = response.data.map(item => {
+          const content = typeof item.message === 'object' 
+                          ? changeHistory(item.message.props.dangerouslySetInnerHTML.__html)
+                          : item.message;
+          return {
+            id: item.id,
+            message: content,
+            status: item.status
+          };
+        });
+
+        setMessages(transformedData);
+    })
   };
 
-  console.log(messages);
+  
+  //页面刷新时执行，只执行一次
+  useEffect(() => {
+    if (!hasRun.current) {
+      //展示用户的消息列表
+      showConversationsItems();
+      hasRun.current = true;
+    }
+
+  }, []);
 
   //切换会话
   useEffect(() => {
     if (activeKey !== undefined) {
-      var newMsg = getMessagesForConversation(activeKey);
-      setMessages(newMsg);
+      //切换会话时展示对应的聊天消息
+      getMessagesForConversation(activeKey)
     }
-    // eslint-disable-next-line
   }, [activeKey]);
+
+  
 
   // ==================== Event ====================
   const onSubmit = (nextContent) => {
@@ -327,26 +377,63 @@ const Independent = () => {
     onRequest(info.data.description);
   };
 
-  //会话管理
+  //获取会话列表
+  const showConversationsItems = () => {
+    const data = {
+      userId: Cookies.get('userId')
+    };
+    axios.post('/session/showconversationsitems', data)
+      .then(function (response) {
+        if(response.data.length>0){
+          setConversationsItems(response.data);
+        }
+      })
+      .catch(function (error) {
+        console.log(`url: /session/showconversationsitems, data: ${JSON.stringify(data)}, error: ${error}`);
+        setStatus('error');
+      });
+  }
+
+  //保存会话列表
+  const saveConversationsItems = (items) => {
+    const data = {
+      userId: Cookies.get('userId'),
+      conversationsItems: items
+    };
+    axios.post('/session/saveconversationsitems', data)
+      .then(function (response) {
+      })
+      .catch(function (error) {
+        console.log(`url: /session/saveconversationsitems, data: ${JSON.stringify(data)}, error: ${error}`);
+        setStatus('error');
+      });
+  }
+
+  //添加会话
   const onAddConversation = () => {
-    setConversationsItems([
-      ...conversationsItems,
-      {
-        key: `${conversationsItems.length}`,
-        label: `会话 ${conversationsItems.length}`,
-      },
-    ]);
-    setActiveKey(`${conversationsItems.length}`);
+    if(status!=='loading'){
+      setConversationsItems(items => {
+        const newItems = [
+          ...conversationsItems,
+          {
+            key: `${conversationsItems.length}`,
+            label: `会话 ${conversationsItems.length}`,
+          },
+        ]
+        saveConversationsItems(newItems);
+        return newItems;
+      });
+      setMessagesForConversation(activeKey,messages);
+      setActiveKey(`${conversationsItems.length}`);
+    }
   };
 
+  //会话切换
   const onConversationClick = (key) => {
-    console.log(activeKey,'==messages==',messages);
-    if(activeKey==='0'){
-      setAaa(messages);
-    }else{
-      setBbb(messages);
+    if(status!=='loading'){
+      setMessagesForConversation(activeKey,messages);
+      setActiveKey(key);
     }
-    setActiveKey(key);
   };
   // const handleFileChange = (info) => setAttachedFiles(info.fileList);
 
@@ -401,6 +488,25 @@ const Independent = () => {
     </div>
   );
 
+  const menuConfig = (conversation) => ({
+    items: [
+      {
+        label: '重命名',
+        key: 'rename',
+        icon: <EditOutlined />,
+      },
+      {
+        label: '删除',
+        key: 'delete',
+        icon: <DeleteOutlined />,
+        danger: true,
+      },
+    ],
+    onClick: (menuInfo) => {
+      console.info(`Click ${conversation.key} - ${menuInfo.key}`);
+    },
+  });
+
   // ==================== Render =================
   return (
     <div className={styles.layout}>
@@ -423,6 +529,7 @@ const Independent = () => {
           className={styles.conversations}
           activeKey={activeKey}
           onActiveChange={onConversationClick}
+          menu={menuConfig}
         />
       </div>
 

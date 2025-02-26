@@ -31,8 +31,6 @@ import axios from 'axios';
 import { marked } from 'marked';
 import Cookies from 'js-cookie';
 
-const API_BASE = "/api";
-
 const renderTitle = (icon, title) => (
   <Space align="start">
     {icon}
@@ -327,6 +325,21 @@ const Independent = () => {
     
   }
 
+  const delMessagesForConversation = (key) => {
+    const data = {
+      userId: Cookies.get('userId'),
+      chatId: key
+    };
+    axios.post('/api/session/delchatsession', data)
+      .then(function (response) {
+      })
+      .catch(function (error) {
+        console.log(`url: /session/delchatsession, data: ${JSON.stringify(data)}, error: ${error}`);
+        setStatus('error');
+      });
+    
+  }
+
   // 根据key获取消息列表的函数
   const getMessagesForConversation = (key) => {
     const data = {
@@ -562,6 +575,7 @@ const Independent = () => {
     const updatedItems = conversationsItems.filter(item => item.key !== key);
     setConversationsItems(updatedItems);
     saveConversationsItems(updatedItems);
+    // delMessagesForConversation(key);
   };
 
   const showDelModal = (conversation) => {

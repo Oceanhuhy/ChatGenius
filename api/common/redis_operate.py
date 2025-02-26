@@ -21,4 +21,10 @@ class RedisDb():
     def exist_redis_token(self, key):
         return self.r.exists(key)
 
+    def delete_key(self, key):
+        if self.r.exists(key):
+            self.r.delete(key)
+            return True
+        return False
+
 redis_db = RedisDb(REDIS_HOST, REDIS_PORT, REDIS_PASSWD)

@@ -18,6 +18,16 @@ def setChatSession():
         redis_db.handle_redis_token(userId+chatId, json.dumps(messages))
     return jsonify({"code": 200, "status": "ok", "msg": f"用户{json.dumps(userId)}-{json.dumps(chatId)}会话保存成功!"})
 
+# 会话删除
+@bp.route('/delchatsession', methods=['POST'])
+def delChatSession():
+    data = request.json
+    userId = data['userId']
+    chatId = data['chatId']
+    print(f"删除会话{userId + chatId}")
+    redis_db.delete_key(userId+chatId)
+    return jsonify({"code": 200, "status": "ok", "msg": f"用户{json.dumps(userId)}-{json.dumps(chatId)}会话删除成功!"})
+
 @bp.route('/getchatsession', methods=['POST'])
 def getChatSession():
     data = request.json

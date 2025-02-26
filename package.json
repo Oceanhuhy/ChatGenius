@@ -44,5 +44,5 @@
       "last 1 safari version"
     ]
   },
-  "proxy": "http://127.0.0.1:9999"
+  "proxy": "http://api:5000"
 }

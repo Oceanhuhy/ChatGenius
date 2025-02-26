@@ -1,13 +1,50 @@
+version: '3.8'
+
 services:
   api:
     build:
       context: .
       dockerfile: Dockerfile.api
-    image: react-flask-app-api
+    image: chat-genius-api
+    container_name: api
+    expose:
+      - "5000:5000"
+    depends_on:
+      - redis  # 依赖 Redis 服务
+    networks:
+      - app-network
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWD=  # 可选，若 Redis 没有密码
+
   client:
     build:
       context: .
       dockerfile: Dockerfile.client
-    image: react-flask-app-client
+    image: chat-genius-client
+    container_name: client
     ports:
       - "3000:80"
+    depends_on:
+      - api
+    networks:
+      - app-network
+    
+  redis:
+    image: redis:latest
+    container_name: redis
+    restart: always
+    ports:
+      - "6379:6379"  # 暴露 Redis 端口（如果需要外部访问）
+    networks:
+      - app-network
+    command: redis-server --appendonly yes  # 启用持久化
+    volumes:
+      - redis_data:/data  # 存储 Redis 数据，防止数据丢失
+
+volumes:
+  redis_data:  # 定义 Redis 数据存储卷
+
+networks:
+  app-network:

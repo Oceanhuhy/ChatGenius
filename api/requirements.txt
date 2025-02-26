@@ -1,7 +1,6 @@
 Flask==3.1.0
-python-dotenv==1.0.1
-gunicorn==23.0.0
+openai==1.64.0
 PyMySQL==1.1.1
 redis==5.2.1
-requests==2.32.3
-
+Requests==2.32.3
+zhipuai==2.1.5.20250106

@@ -26,11 +26,12 @@ import {
   UserOutlined,
   DeleteOutlined, EditOutlined, StopOutlined
 } from '@ant-design/icons';
-import { Badge, Button, Space, Spin } from 'antd';
+import { Badge, Button, Space, Spin, Modal, Input, Popconfirm, Flex, Switch, Typography } from 'antd';
 import axios from 'axios';
 import { marked } from 'marked';
 import Cookies from 'js-cookie';
 
+const API_BASE = "/api";
 
 const renderTitle = (icon, title) => (
   <Space align="start">
@@ -127,6 +128,36 @@ const placeholderPromptsItems = [
   {
     key: '1',
     label: renderTitle(
+      <ReadOutlined
+        style={{
+          color: '#1890FF',
+        }}
+      />,
+      '知识库问答',
+    ),
+    
+    description: '基于知识库的智能问答',
+    children: [
+      {
+        key: '1-1',
+        icon: <HeartOutlined />,
+        description: `党建学习`,
+      },
+      {
+        key: '1-2',
+        icon: <SmileOutlined />,
+        description: `公司制度`,
+      },
+      {
+        key: '1-3',
+        icon: <CommentOutlined />,
+        description: `通知公告`,
+      },
+    ],
+  },
+  {
+    key: '2',
+    label: renderTitle(
       <FireOutlined
         style={{
           color: '#FF4D4F',
@@ -137,48 +168,19 @@ const placeholderPromptsItems = [
     description: '基于大模型的智能问答',
     children: [
       {
-        key: '1-1',
-        icon: <HeartOutlined />,
-        description: `今日运势`,
-      },
-      {
-        key: '1-2',
-        icon: <SmileOutlined />,
-        description: `讲个笑话`,
-      },
-      {
-        key: '1-3',
-        icon: <CommentOutlined />,
-        description: `今日资讯`,
-      },
-    ],
-  },
-  {
-    key: '2',
-    label: renderTitle(
-      <ReadOutlined
-        style={{
-          color: '#1890FF',
-        }}
-      />,
-      '知识库问答',
-    ),
-    description: '基于知识库的智能问答',
-    children: [
-      {
         key: '2-1',
         icon: <HeartOutlined />,
-        description: `党建学习`,
+        description: `公文写作`,
       },
       {
         key: '2-2',
         icon: <SmileOutlined />,
-        description: `公司制度`,
+        description: `会议纪要`,
       },
       {
         key: '2-3',
         icon: <CommentOutlined />,
-        description: `通知公告`,
+        description: `工作总结`,
       },
     ],
   },
@@ -250,8 +252,6 @@ const roles = {
   },
 };
 
-
-
 const Independent = () => {
   // ==================== Style ====================
   const { styles } = useStyle();
@@ -264,6 +264,10 @@ const Independent = () => {
   // const [attachedFiles, setAttachedFiles] = React.useState([]);
   const [status, setStatus] = React.useState();
   const hasRun = useRef(false);
+  // 初始化状态，默认开启 "基础问答"
+  const [selected, setSelected] = React.useState('basicQA');
+  const selectedRef = useRef();
+  selectedRef.current = selected;
   // const [lines, setLines] = React.useState([]);
 
   const changecontext = (key) => {
@@ -283,23 +287,23 @@ const Independent = () => {
       const data = {
         userId: Cookies.get('userId'),
         chatId: activeKey,
+        chatModel: selectedRef.current,
         msg: [{
           role: 'user',
           content: message,
         }]
       };
 
-      await axios.post('/model/chat', data)
+      await axios.post('/api/model/chat', data)
       .then(function (response) {
         setStatus('success');
-        onSuccess(changecontext(response.data.choices[0].message.content));
+        console.log('response',response)
+        onSuccess(changecontext(response.data.data));
       })
       .catch(function (error) {
         console.log(`url: /model/chat, data: ${JSON.stringify(data)}, error: ${error}`);
         setStatus('error');
-      });
-
-      
+      });      
     },
   });
 
@@ -313,13 +317,14 @@ const Independent = () => {
       chatId: key,
       messages: msgs
     };
-    axios.post('/session/setchatsession', data)
+    axios.post('/api/session/setchatsession', data)
       .then(function (response) {
       })
       .catch(function (error) {
         console.log(`url: /session/getchatsession, data: ${JSON.stringify(data)}, error: ${error}`);
         setStatus('error');
       });
+    
   }
 
   // 根据key获取消息列表的函数
@@ -329,7 +334,7 @@ const Independent = () => {
       chatId: key
     };
 
-    axios.post('/session/getchatsession', data)
+    axios.post('/api/session/getchatsession', data)
       .then(function (response) {
         const transformedData = response.data.map(item => {
           const content = typeof item.message === 'object' 
@@ -346,7 +351,6 @@ const Independent = () => {
     })
   };
 
-  
   //页面刷新时执行，只执行一次
   useEffect(() => {
     if (!hasRun.current) {
@@ -382,7 +386,7 @@ const Independent = () => {
     const data = {
       userId: Cookies.get('userId')
     };
-    axios.post('/session/showconversationsitems', data)
+    axios.post('/api/session/showconversationsitems', data)
       .then(function (response) {
         if(response.data.length>0){
           setConversationsItems(response.data);
@@ -400,7 +404,7 @@ const Independent = () => {
       userId: Cookies.get('userId'),
       conversationsItems: items
     };
-    axios.post('/session/saveconversationsitems', data)
+    axios.post('/api/session/saveconversationsitems', data)
       .then(function (response) {
       })
       .catch(function (error) {
@@ -465,7 +469,7 @@ const Independent = () => {
             border: '1px solid #FFF',
           },
         }}
-        onItemClick={onPromptsItemClick}
+        // onItemClick={onPromptsItemClick}
       />
     </Space>
   );
@@ -488,6 +492,7 @@ const Independent = () => {
     </div>
   );
 
+  // ==================== 会话管理操作 =================
   const menuConfig = (conversation) => ({
     items: [
       {
@@ -503,9 +508,83 @@ const Independent = () => {
       },
     ],
     onClick: (menuInfo) => {
-      console.info(`Click ${conversation.key} - ${menuInfo.key}`);
+      if(menuInfo['key'] === 'rename') {
+        showModal(conversation)
+      }else if(menuInfo['key'] === 'delete') {
+        showDelModal(conversation)
+      }
     },
   });
+
+  // 修改
+  const [isModalOpen, setIsModalOpen] = React.useState(false);
+  const [inputValue, setInputValue] = React.useState('');
+  const [newConversation, setNewConversation] = React.useState({});
+
+  const updateLabelByKey = (key, newLabel) => {
+    const updatedItems = conversationsItems.map(item => {
+      if (item.key === key) {
+        return { ...item, label: newLabel };
+      }
+      return item;
+    });
+    setConversationsItems(updatedItems);
+    saveConversationsItems(updatedItems);
+  };
+
+  const showModal = (conversation) => {
+    setInputValue(conversation.label);
+    setNewConversation({
+      key: conversation.key,
+      label: conversation.label,
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleOk = () => {
+    updateLabelByKey(newConversation.key,inputValue);
+    setIsModalOpen(false);
+  };
+
+  const handleCancel = () => {
+    setIsModalOpen(false);
+  };
+
+  const handleInputChange = (e) => {
+    setInputValue(e.target.value);
+  };
+
+  // 删除
+  const [isModalDelOpen, setIsModalDelOpen] = React.useState(false);
+  const [deleteConversation, setDeleteConversation] = React.useState({});
+
+  const deleteLabelByKey = (key) => {
+    const updatedItems = conversationsItems.filter(item => item.key !== key);
+    setConversationsItems(updatedItems);
+    saveConversationsItems(updatedItems);
+  };
+
+  const showDelModal = (conversation) => {
+    setDeleteConversation({
+      key: conversation.key,
+      label: conversation.label,
+    });
+    setIsModalDelOpen(true);
+  };
+  const handleDelOk = () => {
+    deleteLabelByKey(deleteConversation.key);
+    setIsModalDelOpen(false);
+  };
+  const handleDelCancel = () => {
+    setIsModalDelOpen(false);
+  };
+
+  
+  // ==================== 选择框 ==================
+  // 处理 Switch 改变事件
+  const handleSwitchChange = (value, label) => {
+    setSelected(label);
+  };
 
   // ==================== Render =================
   return (
@@ -552,6 +631,33 @@ const Independent = () => {
         {/* 🌟 提示词 */}
         {/*<Prompts items={senderPromptsItems} onItemClick={onPromptsItemClick} />*/}
         {/* 🌟 输入框 */}
+        <Flex direction="row" gap="middle" align="center">
+        <div>
+          <Switch
+            checked={selected === 'basicQA'}
+            onChange={(checked) => handleSwitchChange(checked, 'basicQA')}
+            checkedChildren="大模型"
+            unCheckedChildren="大模型"
+          />
+        </div>
+        <div>
+          <Switch
+            checked={selected === 'knowledgeBaseQA'}
+            onChange={(checked) => handleSwitchChange(checked, 'knowledgeBaseQA')}
+            checkedChildren="知识库"
+            unCheckedChildren="知识库"
+          />
+        </div>
+        {/* <div>
+          <Switch
+            checked={selected === 'intelligentAgent'}
+            onChange={(checked) => handleSwitchChange(checked, 'intelligentAgent')}
+            checkedChildren="智能体"
+            unCheckedChildren="智能体"
+          />
+        </div> */}
+        </Flex>
+
         <Sender
           value={content}
           // header={senderHeader}
@@ -562,7 +668,20 @@ const Independent = () => {
           className={styles.sender}
         />
       </div>
+
+      <Modal title="重命名" open={isModalOpen} onOk={handleOk} onCancel={handleCancel}>
+        <Input
+          placeholder="Basic usage"
+          value={inputValue}
+          onChange={handleInputChange}
+        />
+      </Modal>
+      <Modal title="删除" open={isModalDelOpen} onOk={handleDelOk} onCancel={handleDelCancel}>
+        <p>是否确认删除会话{deleteConversation.key}</p>
+      </Modal>
     </div>
+
+    
   );
 };
 export default Independent;

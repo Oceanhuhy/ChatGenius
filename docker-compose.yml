@@ -6,6 +6,7 @@ services:
       context: .
       dockerfile: Dockerfile.api
     image: api:1.0.0
+    platform: linux/amd64
     container_name: api
     expose:
       - "5000:5000"
@@ -23,6 +24,7 @@ services:
       context: .
       dockerfile: Dockerfile.client
     image: client:1.0.0
+    platform: linux/amd64
     container_name: client
     ports:
       - "3000:80"
@@ -32,7 +34,7 @@ services:
       - app-network
     
   redis:
-    image: redis:1.0.0
+    image: redis:latest
     container_name: redis
     restart: always
     ports:
